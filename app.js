@@ -1,8 +1,9 @@
 "use strict";
 
 const TASKS_PER_LEVEL = 18;
-const BASIS_GOAL = 12;
-const STORAGE_KEY = "mathe-fit-metall-progress-v1";
+const BASIS_GOAL = TASKS_PER_LEVEL;
+const STORAGE_KEY = "mathe-fit-metall-progress-v2";
+const LEGACY_STORAGE_KEY = "mathe-fit-metall-progress-v1";
 
 const DIFFICULTIES = [
   { id: "basis", label: "Basis", note: "Pflicht", factor: 1 },
@@ -125,6 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function cacheRefs() {
   [
     "categoryList",
+    "categorySelect",
     "difficultyTabs",
     "categoryTitle",
     "categoryIntro",
@@ -146,6 +148,7 @@ function cacheRefs() {
     "nextTask",
     "randomTask",
     "formulaList",
+    "mobileFormulaList",
     "difficultyNote",
     "basisProgress",
     "basisBar",
@@ -159,6 +162,7 @@ function cacheRefs() {
 }
 
 function bindEvents() {
+  refs.categorySelect.addEventListener("change", () => selectCategory(refs.categorySelect.value));
   refs.answerForm.addEventListener("submit", (event) => {
     event.preventDefault();
     checkAnswer();
@@ -186,9 +190,27 @@ function bindEvents() {
   });
 }
 
+function selectCategory(categoryId) {
+  state.categoryId = categoryId;
+  state.difficultyId = "basis";
+  state.taskIndex = firstOpenTaskIndex(categoryId, "basis");
+  state.hintIndex = -1;
+  renderAll();
+}
+
 function loadProgress() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved !== null) return JSON.parse(saved) || {};
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "{}");
+    return Object.fromEntries(Object.entries(legacy).filter(([id]) => {
+      const match = id.match(/^([a-z]+)-(training|plus)-(\d+)$/);
+      if (!match) return false;
+      const index = Number(match[3]);
+      if (match[1] === "grund") return index <= 3;
+      if (match[1] === "prozent") return index <= 6 && index !== 5;
+      return index <= 6;
+    }));
   } catch {
     return {};
   }
@@ -207,6 +229,10 @@ function renderAll() {
 }
 
 function renderCategories() {
+  refs.categorySelect.innerHTML = CATEGORIES.map((category) =>
+    `<option value="${category.id}">${category.title}</option>`
+  ).join("");
+  refs.categorySelect.value = state.categoryId;
   refs.categoryList.innerHTML = CATEGORIES.map((category) => {
     const basis = generatedTasks[category.id].basis;
     const solved = countSolved(category.id, "basis");
@@ -221,13 +247,7 @@ function renderCategories() {
   }).join("");
 
   refs.categoryList.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.categoryId = button.dataset.category;
-      state.difficultyId = "basis";
-      state.taskIndex = firstOpenTaskIndex(state.categoryId, state.difficultyId);
-      state.hintIndex = -1;
-      renderAll();
-    });
+    button.addEventListener("click", () => selectCategory(button.dataset.category));
   });
 }
 
@@ -243,7 +263,7 @@ function renderDifficulties() {
     return `
       <button class="difficulty-tab" type="button" role="tab" aria-selected="${difficulty.id === state.difficultyId}" data-difficulty="${difficulty.id}">
         ${difficulty.label}
-        <span>${difficulty.note} · ${solved}/${total}</span>
+        <span><span class="tab-note">${difficulty.note} · </span>${solved}/${total}</span>
       </button>
     `;
   }).join("");
@@ -260,20 +280,24 @@ function renderDifficulties() {
 
 function renderFormulaCard() {
   const category = CATEGORY_MAP[state.categoryId];
-  refs.formulaList.innerHTML = category.formulas.map(([name, formula]) => `
+  const content = category.formulas.map(([name, formula]) => `
     <div class="formula-item">
       <code>${name}</code>
       <small>${formula}</small>
     </div>
   `).join("");
+  refs.formulaList.innerHTML = content;
+  refs.mobileFormulaList.innerHTML = content;
+  typesetMath(refs.formulaList);
+  typesetMath(refs.mobileFormulaList);
 
   const solved = countSolved(state.categoryId, "basis");
   const total = generatedTasks[state.categoryId].basis.length;
   refs.basisProgress.textContent = `${solved}/${total}`;
   refs.basisBar.style.width = `${Math.min(100, Math.round((solved / total) * 100))}%`;
   refs.rubricAdvice.textContent = solved >= BASIS_GOAL
-    ? "Basis geschafft. Plus-Aufgaben sind freiwillig und gut für schnelle Gruppen."
-    : `Ziel: erst ${BASIS_GOAL} Basisaufgaben sicher lösen. Danach darf Plus übersprungen oder als Zusatz genutzt werden.`;
+    ? "Basis geschafft. Training und Plus sind freiwillige Zusatzaufgaben."
+    : `Ziel: ${BASIS_GOAL} Basisaufgaben lösen. Training und Plus sind freiwillig.`;
 
   refs.difficultyNote.textContent = state.difficultyId === "plus" ? "Plus ist freiwillig" : "Basis zuerst sauber rechnen";
 }
@@ -285,14 +309,20 @@ function renderTask() {
   const result = state.progress[task.id];
 
   refs.difficultyPill.textContent = `${difficulty.label} · ${difficulty.note}`;
-  refs.taskCounter.textContent = `Aufgabe ${state.taskIndex + 1} von ${list.length}`;
+  refs.taskCounter.textContent = `Aufgabe ${state.taskIndex + 1}/${list.length}`;
   refs.taskTitle.textContent = task.title;
+  typesetMath(refs.taskTitle);
   refs.taskQuestion.innerHTML = task.question;
+  typesetMath(refs.taskQuestion);
   refs.answerUnit.textContent = task.unit || "";
   refs.answerInput.value = "";
   refs.answerInput.placeholder = task.placeholder || "z. B. 12,5";
-  refs.answerInput.focus({ preventScroll: true });
+  if (window.matchMedia("(min-width: 721px)").matches) {
+    refs.answerInput.focus({ preventScroll: true });
+  }
   refs.diagramSlot.innerHTML = task.diagram || "";
+  refs.diagramSlot.hidden = !task.diagram;
+  refs.diagramSlot.parentElement.classList.toggle("has-diagram", Boolean(task.diagram));
   refs.feedbackBox.hidden = true;
   refs.feedbackBox.className = "feedback-box";
   refs.helpPanel.classList.toggle("needs-help", false);
@@ -326,16 +356,67 @@ function renderHints(showSolution) {
       <ol>${task.steps.map((step) => `<li>${step}</li>`).join("")}</ol>
       <p>Ergebnis: <strong>${formatNumber(task.answer, task.decimals)} ${task.unit}</strong></p>
     `;
+    typesetMath(refs.hintOutput);
     return;
   }
 
   if (state.hintIndex >= 0) {
     refs.hintOutput.hidden = false;
     refs.hintOutput.innerHTML = `<strong>Tipp ${state.hintIndex + 1}</strong><p>${task.hints[state.hintIndex]}</p>`;
+    typesetMath(refs.hintOutput);
   } else {
     refs.hintOutput.hidden = true;
     refs.hintOutput.innerHTML = "";
   }
+}
+
+function typesetMath(root) {
+  const atom = "(?:√(?:\\([^)]*\\)|\\d+(?:[.,]\\d+)?)|[A-Za-zα-ωΑ-Ω][A-Za-z0-9_₀-₉²³]*|[-+]?\\d+(?:[.,]\\d+)?[²³]?)";
+  const pattern = new RegExp(`(${atom}(?:\\s*·\\s*${atom})*)\\s*\\/\\s*(\\([^)]*\\)|${atom})`, "g");
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const source = node.textContent;
+    const fragment = document.createDocumentFragment();
+    let start = 0;
+    let match;
+    pattern.lastIndex = 0;
+    while ((match = pattern.exec(source))) {
+      if (/^[A-Z][a-z]+\/[A-Z][a-z]+$/.test(match[0])) continue;
+      appendMathText(fragment, source.slice(start, match.index));
+      const fraction = document.createElement("span");
+      fraction.className = "math-frac";
+      fraction.setAttribute("role", "math");
+      fraction.setAttribute("aria-label", `${match[1]} geteilt durch ${match[2]}`);
+      const top = document.createElement("span");
+      const bottom = document.createElement("span");
+      appendMathText(top, match[1]);
+      appendMathText(bottom, match[2].replace(/^\((.*)\)$/, "$1"));
+      fraction.append(top, bottom);
+      fragment.append(fraction);
+      start = pattern.lastIndex;
+    }
+    appendMathText(fragment, source.slice(start));
+    node.replaceWith(fragment);
+  }
+}
+
+function appendMathText(target, source) {
+  const greek = { pi: "π", rho: "ρ", sigma: "σ", tau: "τ", alpha: "α" };
+  const normalized = source.replace(/\b(pi|rho|sigma|tau|alpha)\b/g, (word) => greek[word]);
+  const pattern = /([A-Za-zπρστα])_([A-Za-z0-9]+)|\b([Ffl])([12])\b/g;
+  let start = 0;
+  let match;
+  while ((match = pattern.exec(normalized))) {
+    target.append(document.createTextNode(normalized.slice(start, match.index)));
+    target.append(document.createTextNode(match[1] || match[3]));
+    const sub = document.createElement("sub");
+    sub.textContent = match[2] || match[4];
+    target.append(sub);
+    start = pattern.lastIndex;
+  }
+  target.append(document.createTextNode(normalized.slice(start)));
 }
 
 function checkAnswer() {
@@ -414,14 +495,14 @@ function parseNumber(input) {
   const value = input.trim();
   if (!value) return null;
 
-  const fraction = value.replace(/\s/g, "").replace(",", ".").match(/^([-+]?\d+(?:\.\d+)?)\/([-+]?\d+(?:\.\d+)?)/);
+  const fraction = value.replace(/\s/g, "").replace(",", ".").match(/^([-+]?\d+(?:\.\d+)?)\/([-+]?\d+(?:\.\d+)?)$/);
   if (fraction) {
     const denominator = Number(fraction[2]);
     if (denominator === 0) return null;
     return Number(fraction[1]) / denominator;
   }
 
-  const match = value.replace(",", ".").match(/[-+]?\d+(?:\.\d+)?/);
+  const match = value.replace(",", ".").match(/^[-+]?\d+(?:\.\d+)?$/);
   if (!match) return null;
   const number = Number(match[0]);
   return Number.isFinite(number) ? number : null;
@@ -475,13 +556,15 @@ function levelIndex(level) {
 }
 
 function taskBase(title, question, answer, unit, decimals, hints, steps, diagram = "") {
+  const roundedTolerance = 0.51 * 10 ** -decimals;
+  const piTolerance = steps.some((step) => /(?:pi|π)/.test(step)) ? Math.abs(answer) * 0.00055 : 0;
   return {
     title,
     question,
     answer,
     unit,
     decimals,
-    tolerance: Math.max(Math.abs(answer) * 0.006, decimals === 0 ? 0.4 : 0.03),
+    tolerance: Math.max(roundedTolerance, piTolerance),
     hints,
     steps,
     diagram
@@ -537,9 +620,9 @@ const TEMPLATES = {
   grund: [
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 18, 80 + i * 60);
-      const b = int(rng, 4, 18 + i * 8);
-      const c = int(rng, 3, 14 + i * 8);
+      const a = level === "basis" ? int(rng, 20, 70, 10) : int(rng, 18, 80 + i * 60);
+      const b = level === "basis" ? int(rng, 2, 8, 2) : int(rng, 4, 18 + i * 8);
+      const c = level === "basis" ? int(rng, 2, 5) : int(rng, 3, 14 + i * 8);
       const answer = a + b * c;
       return taskBase(
         "Punkt vor Strich",
@@ -553,9 +636,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 8, 30 + i * 20);
-      const b = int(rng, 2, 9 + i * 5);
-      const c = int(rng, 4, 12 + i * 4);
+      const a = level === "basis" ? int(rng, 10, 20, 5) : int(rng, 8, 30 + i * 20);
+      const b = level === "basis" ? pick(rng, [5, 10]) : int(rng, 2, 9 + i * 5);
+      const c = level === "basis" ? int(rng, 2, 4) : int(rng, 4, 12 + i * 4);
       const answer = (a + b) * c;
       return taskBase(
         "Klammerrechnung",
@@ -569,8 +652,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const length = int(rng, 120, 480 + i * 360, 10);
-      const pieces = int(rng, 3, 8 + i * 4);
+      const length = level === "basis" ? pick(rng, [100, 150, 200, 250]) : int(rng, 120, 480 + i * 360, 10);
+      const pieces = level === "basis" ? int(rng, 2, 5) : int(rng, 3, 8 + i * 4);
       const answer = length * pieces;
       return taskBase(
         "Stückliste addieren",
@@ -579,14 +662,13 @@ const TEMPLATES = {
         "mm",
         0,
         ["Gleiche Streifen werden multipliziert.", "Anzahl · Länge je Streifen.", "Die Einheit bleibt Millimeter."],
-        [`${pieces} · ${length} mm = ${answer} mm`],
-        rectDiagram(`${length} mm`, `${pieces}x`)
+        [`${pieces} · ${length} mm = ${answer} mm`]
       );
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const total = int(rng, 240, 960 + i * 720, 20);
-      const parts = pick(rng, [3, 4, 5, 6, 8, 10, 12]);
+      const parts = level === "basis" ? pick(rng, [2, 4, 5, 10]) : pick(rng, [3, 4, 5, 6, 8, 10, 12]);
+      const total = level === "basis" ? parts * pick(rng, [20, 25, 50, 75]) : int(rng, 240, 960 + i * 720, 20);
       const answer = total / parts;
       return taskBase(
         "Gleichmäßig teilen",
@@ -599,11 +681,11 @@ const TEMPLATES = {
       );
     },
     (rng, level) => {
-      const i = levelIndex(level);
-      const a = int(rng, 2, 7 + i * 3);
-      const b = int(rng, 3, 11 + i * 4);
-      const c = int(rng, 2, 8 + i * 3);
-      const d = int(rng, 3, 12 + i * 4);
+      const [a, b, c, d] = pick(rng, {
+        basis: [[1, 2, 1, 4], [1, 4, 2, 4], [1, 5, 3, 10], [3, 4, 1, 4]],
+        training: [[3, 4, 1, 5], [7, 10, 2, 5], [2, 5, 1, 4]],
+        plus: [[7, 10, 3, 5], [9, 10, 1, 4], [3, 4, 7, 10]]
+      }[level]);
       const answer = a / b + c / d;
       return taskBase(
         "Brüche als Dezimalzahl",
@@ -617,9 +699,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const start = int(rng, 80, 260 + i * 180);
-      const subtract = int(rng, 15, 70 + i * 55);
-      const add = int(rng, 20, 120 + i * 100);
+      const start = level === "basis" ? int(rng, 80, 160, 10) : int(rng, 80, 260 + i * 180);
+      const subtract = level === "basis" ? int(rng, 20, 60, 10) : int(rng, 15, 70 + i * 55);
+      const add = level === "basis" ? int(rng, 20, 80, 10) : int(rng, 20, 120 + i * 100);
       const answer = start - subtract + add;
       return taskBase(
         "Plus und Minus",
@@ -636,7 +718,7 @@ const TEMPLATES = {
   einheiten: [
     (rng, level) => {
       const i = levelIndex(level);
-      const mm = int(rng, 125, 2500 + i * 5000, 25);
+      const mm = level === "basis" ? pick(rng, [250, 500, 750, 1250]) : int(rng, 125, 2500 + i * 5000, 25);
       const answer = mm / 1000;
       return taskBase(
         "Millimeter in Meter",
@@ -650,7 +732,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const m = int(rng, 2, 16 + i * 18);
+      const m = level === "basis" ? pick(rng, [2, 3, 5]) : int(rng, 2, 16 + i * 18);
       const answer = m * 1000;
       return taskBase(
         "Meter in Millimeter",
@@ -664,7 +746,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const cm2 = int(rng, 4, 90 + i * 160);
+      const cm2 = level === "basis" ? pick(rng, [2, 5, 10]) : int(rng, 4, 90 + i * 160);
       const answer = cm2 * 100;
       return taskBase(
         "Quadratzentimeter in Quadratmillimeter",
@@ -679,7 +761,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const cm3 = int(rng, 250, 8400 + i * 12000, 50);
+      const cm3 = level === "basis" ? pick(rng, [500, 1500, 2500]) : int(rng, 250, 8400 + i * 12000, 50);
       const answer = cm3 / 1000;
       return taskBase(
         "Kubikzentimeter in Kubikdezimeter",
@@ -694,7 +776,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const ms = int(rng, 2, 32 + i * 38);
+      const ms = level === "basis" ? pick(rng, [5, 10, 20]) : int(rng, 2, 32 + i * 38);
       const answer = ms * 3.6;
       return taskBase(
         "m/s in km/h",
@@ -708,7 +790,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const kw = int(rng, 3, 85 + i * 150);
+      const kw = level === "basis" ? pick(rng, [2, 5, 10]) : int(rng, 3, 85 + i * 150);
       const answer = kw * 1000;
       return taskBase(
         "Kilowatt in Watt",
@@ -725,8 +807,8 @@ const TEMPLATES = {
   prozent: [
     (rng, level) => {
       const i = levelIndex(level);
-      const wage = int(rng, 12, 28 + i * 20);
-      const percent = int(rng, 2, 8 + i * 7);
+      const wage = level === "basis" ? pick(rng, [20, 25, 30]) : int(rng, 12, 28 + i * 20);
+      const percent = level === "basis" ? pick(rng, [10, 20]) : int(rng, 2, 8 + i * 7);
       const answer = wage * (1 + percent / 100);
       return taskBase(
         "Lohnerhöhung",
@@ -740,8 +822,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const price = int(rng, 40, 420 + i * 900, 5);
-      const percent = int(rng, 5, 35 + i * 15);
+      const price = level === "basis" ? pick(rng, [80, 100, 200]) : int(rng, 40, 420 + i * 900, 5);
+      const percent = level === "basis" ? pick(rng, [10, 25, 50]) : int(rng, 5, 35 + i * 15);
       const answer = price * (1 - percent / 100);
       return taskBase(
         "Rabatt",
@@ -755,8 +837,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const base = int(rng, 80, 900 + i * 2500, 10);
-      const percent = int(rng, 6, 42 + i * 22);
+      const base = level === "basis" ? pick(rng, [100, 200, 400]) : int(rng, 80, 900 + i * 2500, 10);
+      const percent = level === "basis" ? pick(rng, [5, 10, 20, 25]) : int(rng, 6, 42 + i * 22);
       const answer = base * percent / 100;
       return taskBase(
         "Prozentwert",
@@ -770,9 +852,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const capital = int(rng, 500, 12000 + i * 22000, 250);
-      const percent = int(rng, 2, 6 + i * 5);
-      const months = pick(rng, [3, 4, 6, 9, 12, 18]);
+      const capital = level === "basis" ? pick(rng, [600, 1200, 2400]) : int(rng, 500, 12000 + i * 22000, 250);
+      const percent = level === "basis" ? pick(rng, [2, 4, 5]) : int(rng, 2, 6 + i * 5);
+      const months = level === "basis" ? pick(rng, [3, 6, 12]) : pick(rng, [3, 4, 6, 9, 12, 18]);
       const answer = capital * percent * months / (100 * 12);
       return taskBase(
         "Zinsen",
@@ -786,8 +868,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const part = int(rng, 12, 180 + i * 320);
-      const percent = pick(rng, [10, 12, 15, 20, 25, 30, 40, 50]);
+      const percent = level === "basis" ? pick(rng, [10, 20, 25, 50]) : pick(rng, [10, 12, 15, 20, 25, 30, 40, 50]);
+      const part = level === "basis" ? percent * pick(rng, [2, 4, 8]) / 10 : int(rng, 12, 180 + i * 320);
       const answer = part * 100 / percent;
       return taskBase(
         "Grundwert finden",
@@ -801,8 +883,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const oldValue = int(rng, 60, 440 + i * 800, 10);
-      const newValue = oldValue + int(rng, 6, 80 + i * 160, 2);
+      const oldValue = level === "basis" ? pick(rng, [100, 200, 400]) : int(rng, 60, 440 + i * 800, 10);
+      const newValue = oldValue + (level === "basis" ? oldValue / 10 : int(rng, 6, 80 + i * 160, 2));
       const answer = (newValue - oldValue) / oldValue * 100;
       return taskBase(
         "Prozentsatz berechnen",
@@ -819,8 +901,8 @@ const TEMPLATES = {
   umstellen: [
     (rng, level) => {
       const i = levelIndex(level);
-      const s = int(rng, 20, 180 + i * 380, 10);
-      const v = int(rng, 2, 15 + i * 20);
+      const s = level === "basis" ? pick(rng, [60, 120]) : int(rng, 20, 180 + i * 380, 10);
+      const v = level === "basis" ? pick(rng, [5, 10]) : int(rng, 2, 15 + i * 20);
       const answer = s / v;
       return taskBase(
         "t aus v = s / t",
@@ -834,8 +916,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const area = int(rng, 1200, 12000 + i * 22000, 100);
-      const width = int(rng, 20, 80 + i * 60, 5);
+      const area = level === "basis" ? pick(rng, [200, 300, 500]) : int(rng, 1200, 12000 + i * 22000, 100);
+      const width = level === "basis" ? pick(rng, [10, 20, 25]) : int(rng, 20, 80 + i * 60, 5);
       const answer = area / width;
       return taskBase(
         "a aus A = a · b",
@@ -850,8 +932,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const rho = pick(rng, [2.7, 7.85, 8.9]);
-      const volume = int(rng, 40, 380 + i * 900, 10);
+      const rho = level === "basis" ? 2.7 : pick(rng, [2.7, 7.85, 8.9]);
+      const volume = level === "basis" ? pick(rng, [100, 200]) : int(rng, 40, 380 + i * 900, 10);
       const answer = rho * volume;
       return taskBase(
         "m aus m = rho · V",
@@ -865,8 +947,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const force = int(rng, 1500, 24000 + i * 70000, 500);
-      const area = int(rng, 40, 300 + i * 700, 10);
+      const force = level === "basis" ? pick(rng, [100, 200, 400]) : int(rng, 1500, 24000 + i * 70000, 500);
+      const area = level === "basis" ? pick(rng, [20, 25, 50]) : int(rng, 40, 300 + i * 700, 10);
       const answer = force / area;
       return taskBase(
         "sigma aus sigma = F / A",
@@ -880,23 +962,23 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const vc = int(rng, 20, 90 + i * 140, 5);
-      const d = int(rng, 20, 120 + i * 160, 5);
+      const vc = level === "basis" ? 31.4 : int(rng, 20, 90 + i * 140, 5);
+      const d = level === "basis" ? 100 : int(rng, 20, 120 + i * 160, 5);
       const answer = vc * 1000 / (Math.PI * d);
       return taskBase(
         "n aus v_c = pi · d · n / 1000",
-        `Stelle nach n um und berechne: v_c = <strong>${vc} m/min</strong>, d = <strong>${d} mm</strong>.`,
+        `Stelle nach n um und berechne: v_c = <strong>${shortNumber(vc, 1)} m/min</strong>, d = <strong>${d} mm</strong>.`,
         answer,
         "min⁻¹",
         0,
         ["n steht im Produkt.", "Multipliziere v_c mit 1000.", "Teile durch pi · d."],
-        [`n = v_c · 1000 / (pi · d)`, `n = ${vc} · 1000 / (pi · ${d}) = ${formatNumber(answer, 0)} min⁻¹`]
+        [`n = v_c · 1000 / (pi · d)`, `n = ${shortNumber(vc, 1)} · 1000 / (pi · ${d}) = ${formatNumber(answer, 0)} min⁻¹`]
       );
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const force = int(rng, 800, 12000 + i * 32000, 200);
-      const pressure = int(rng, 10, 90 + i * 160, 5);
+      const force = level === "basis" ? 1000 : int(rng, 800, 12000 + i * 32000, 200);
+      const pressure = level === "basis" ? 20 : int(rng, 10, 90 + i * 160, 5);
       const answer = force / pressure;
       return taskBase(
         "A aus p = F / A",
@@ -913,8 +995,8 @@ const TEMPLATES = {
   pythagoras: [
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 300, 1400 + i * 1600, 50);
-      const b = int(rng, 200, 1100 + i * 1300, 50);
+      const [a, b] = level === "basis" ? pick(rng, [[300, 400], [600, 800], [900, 1200]])
+        : [int(rng, 300, 1400 + i * 1600, 50), int(rng, 200, 1100 + i * 1300, 50)];
       const answer = Math.sqrt(a * a + b * b);
       return taskBase(
         "Diagonale prüfen",
@@ -929,8 +1011,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const base = int(rng, 2, 8 + i * 8);
-      const diag = base + int(rng, 2, 7 + i * 9);
+      const [base, diag] = level === "basis" ? pick(rng, [[3, 5], [5, 13], [6, 10]])
+        : (() => { const side = int(rng, 2, 8 + i * 8); return [side, side + int(rng, 2, 7 + i * 9)]; })();
       const answer = Math.sqrt(diag * diag - base * base);
       return taskBase(
         "Fehlende Kathete",
@@ -945,8 +1027,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const run = int(rng, 40, 180 + i * 260, 10);
-      const rise = int(rng, 10, 90 + i * 140, 5);
+      const run = level === "basis" ? pick(rng, [40, 60, 100]) : int(rng, 40, 180 + i * 260, 10);
+      const rise = level === "basis" ? run : int(rng, 10, 90 + i * 140, 5);
       const answer = Math.atan(rise / run) * 180 / Math.PI;
       return taskBase(
         "Steigungswinkel",
@@ -961,8 +1043,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const angle = int(rng, 18, 55 + i * 15);
-      const hyp = int(rng, 80, 260 + i * 420, 10);
+      const angle = level === "basis" ? 30 : int(rng, 18, 55 + i * 15);
+      const hyp = level === "basis" ? pick(rng, [80, 100, 120]) : int(rng, 80, 260 + i * 420, 10);
       const answer = Math.sin(angle * Math.PI / 180) * hyp;
       return taskBase(
         "Gegenkathete mit Sinus",
@@ -977,8 +1059,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const angle = int(rng, 20, 65 + i * 10);
-      const adjacent = int(rng, 70, 320 + i * 520, 10);
+      const angle = level === "basis" ? 60 : int(rng, 20, 65 + i * 10);
+      const adjacent = level === "basis" ? pick(rng, [40, 60, 100]) : int(rng, 70, 320 + i * 520, 10);
       const answer = adjacent / Math.cos(angle * Math.PI / 180);
       return taskBase(
         "Hypotenuse mit Kosinus",
@@ -993,8 +1075,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 80, 360 + i * 700, 10);
-      const b = int(rng, 80, 360 + i * 700, 10);
+      const [a, b] = level === "basis" ? pick(rng, [[60, 80], [90, 120], [120, 160]])
+        : [int(rng, 80, 360 + i * 700, 10), int(rng, 80, 360 + i * 700, 10)];
       const answer = Math.sqrt(a * a + b * b);
       return taskBase(
         "Bohrbild diagonal",
@@ -1012,8 +1094,8 @@ const TEMPLATES = {
   flaechen: [
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 20, 180 + i * 360, 5);
-      const b = int(rng, 15, 140 + i * 260, 5);
+      const a = level === "basis" ? 20 : int(rng, 20, 180 + i * 360, 5);
+      const b = level === "basis" ? 10 : int(rng, 15, 140 + i * 260, 5);
       const answer = a * b;
       return taskBase(
         "Rechteckfläche",
@@ -1028,8 +1110,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const g = int(rng, 30, 220 + i * 380, 5);
-      const h = int(rng, 20, 170 + i * 320, 5);
+      const g = level === "basis" ? 20 : int(rng, 30, 220 + i * 380, 5);
+      const h = level === "basis" ? 10 : int(rng, 20, 170 + i * 320, 5);
       const answer = g * h / 2;
       return taskBase(
         "Dreieckfläche",
@@ -1044,7 +1126,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const d = int(rng, 20, 160 + i * 280, 5);
+      const d = level === "basis" ? 10 : int(rng, 20, 160 + i * 280, 5);
       const answer = Math.PI * d * d / 4;
       return taskBase(
         "Kreisfläche",
@@ -1059,8 +1141,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const outer = int(rng, 40, 180 + i * 260, 5);
-      const inner = int(rng, 10, outer - 15, 5);
+      const outer = level === "basis" ? 10 : int(rng, 40, 180 + i * 260, 5);
+      const inner = level === "basis" ? 6 : int(rng, 10, outer - 15, 5);
       const answer = Math.PI * (outer * outer - inner * inner) / 4;
       return taskBase(
         "Unterlegscheibe",
@@ -1075,9 +1157,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 30, 180 + i * 300, 5);
-      const b = int(rng, 20, 120 + i * 240, 5);
-      const hole = int(rng, 8, Math.min(a, b) - 5, 2);
+      const a = level === "basis" ? 20 : int(rng, 30, 180 + i * 300, 5);
+      const b = level === "basis" ? 10 : int(rng, 20, 120 + i * 240, 5);
+      const hole = level === "basis" ? 4 : int(rng, 8, Math.min(a, b) - 5, 2);
       const answer = a * b - Math.PI * hole * hole / 4;
       return taskBase(
         "Rechteck mit Bohrung",
@@ -1086,13 +1168,12 @@ const TEMPLATES = {
         "mm²",
         1,
         ["Rechteckfläche minus Kreisfläche.", "A = a · b - pi · d² / 4.", "Die Bohrung wird abgezogen."],
-        [`A = ${a} · ${b} - pi · ${hole}² / 4`, `A = ${formatNumber(answer, 1)} mm²`],
-        rectDiagram(`${a} mm`, `${b} mm`)
+        [`A = ${a} · ${b} - pi · ${hole}² / 4`, `A = ${formatNumber(answer, 1)} mm²`]
       );
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 12, 80 + i * 140, 2);
+      const a = level === "basis" ? 4 : int(rng, 12, 80 + i * 140, 2);
       const answer = 3 * Math.sqrt(3) / 2 * a * a;
       return taskBase(
         "Regelmäßiges Sechseck",
@@ -1109,9 +1190,9 @@ const TEMPLATES = {
   volumen: [
     (rng, level) => {
       const i = levelIndex(level);
-      const l = int(rng, 40, 240 + i * 460, 10);
-      const b = int(rng, 20, 120 + i * 260, 10);
-      const h = int(rng, 10, 90 + i * 180, 5);
+      const l = level === "basis" ? 10 : int(rng, 40, 240 + i * 460, 10);
+      const b = level === "basis" ? 5 : int(rng, 20, 120 + i * 260, 10);
+      const h = level === "basis" ? 2 : int(rng, 10, 90 + i * 180, 5);
       const answer = l * b * h;
       return taskBase(
         "Quader",
@@ -1126,8 +1207,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const d = int(rng, 20, 130 + i * 240, 5);
-      const h = int(rng, 30, 260 + i * 500, 10);
+      const d = level === "basis" ? 10 : int(rng, 20, 130 + i * 240, 5);
+      const h = level === "basis" ? 10 : int(rng, 30, 260 + i * 500, 10);
       const answer = Math.PI * d * d / 4 * h;
       return taskBase(
         "Zylinder",
@@ -1142,7 +1223,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const volume = int(rng, 20, 500 + i * 1200, 10);
+      const volume = level === "basis" ? 100 : int(rng, 20, 500 + i * 1200, 10);
       const rho = 7.85;
       const answer = volume * rho;
       return taskBase(
@@ -1157,8 +1238,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const mass = int(rng, 500, 9000 + i * 16000, 100);
-      const rho = pick(rng, [2.7, 7.85, 8.9]);
+      const mass = level === "basis" ? 270 : int(rng, 500, 9000 + i * 16000, 100);
+      const rho = level === "basis" ? 2.7 : pick(rng, [2.7, 7.85, 8.9]);
       const answer = mass / rho;
       return taskBase(
         "Volumen aus Masse",
@@ -1172,8 +1253,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const a = int(rng, 40, 180 + i * 320, 10);
-      const h = int(rng, 30, 160 + i * 300, 10);
+      const a = level === "basis" ? 10 : int(rng, 40, 180 + i * 320, 10);
+      const h = level === "basis" ? 3 : int(rng, 30, 160 + i * 300, 10);
       const answer = a * a * h / 3;
       return taskBase(
         "Pyramide",
@@ -1187,7 +1268,7 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const cm3 = int(rng, 500, 9500 + i * 18000, 100);
+      const cm3 = level === "basis" ? 1500 : int(rng, 500, 9500 + i * 18000, 100);
       const answer = cm3 / 1000;
       return taskBase(
         "Volumen umrechnen",
@@ -1205,8 +1286,8 @@ const TEMPLATES = {
   bewegung: [
     (rng, level) => {
       const i = levelIndex(level);
-      const s = int(rng, 20, 180 + i * 420, 10);
-      const t = int(rng, 4, 25 + i * 50);
+      const s = level === "basis" ? 60 : int(rng, 20, 180 + i * 420, 10);
+      const t = level === "basis" ? 10 : int(rng, 4, 25 + i * 50);
       const answer = s / t;
       return taskBase(
         "Konstante Geschwindigkeit",
@@ -1220,8 +1301,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const v = int(rng, 2, 12 + i * 24);
-      const s = int(rng, 30, 240 + i * 520, 10);
+      const v = level === "basis" ? 5 : int(rng, 2, 12 + i * 24);
+      const s = level === "basis" ? 60 : int(rng, 30, 240 + i * 520, 10);
       const answer = s / v;
       return taskBase(
         "Zeit berechnen",
@@ -1235,8 +1316,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const d = int(rng, 40, 180 + i * 260, 5);
-      const n = int(rng, 80, 700 + i * 1400, 20);
+      const d = level === "basis" ? 100 : int(rng, 40, 180 + i * 260, 5);
+      const n = level === "basis" ? 100 : int(rng, 80, 700 + i * 1400, 20);
       const answer = Math.PI * d * n / 1000;
       return taskBase(
         "Schnittgeschwindigkeit",
@@ -1251,9 +1332,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const fz = pick(rng, [0.05, 0.08, 0.1, 0.12, 0.15, 0.2]);
-      const z = int(rng, 2, 8 + i * 8);
-      const n = int(rng, 120, 900 + i * 1800, 20);
+      const fz = level === "basis" ? 0.1 : pick(rng, [0.05, 0.08, 0.1, 0.12, 0.15, 0.2]);
+      const z = level === "basis" ? 2 : int(rng, 2, 8 + i * 8);
+      const n = level === "basis" ? 100 : int(rng, 120, 900 + i * 1800, 20);
       const answer = fz * z * n;
       return taskBase(
         "Vorschubgeschwindigkeit",
@@ -1267,8 +1348,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const v0 = int(rng, 4, 30 + i * 40);
-      const t = int(rng, 2, 12 + i * 20);
+      const v0 = level === "basis" ? 12 : int(rng, 4, 30 + i * 40);
+      const t = level === "basis" ? 3 : int(rng, 2, 12 + i * 20);
       const answer = v0 / t;
       return taskBase(
         "Verzögerung",
@@ -1282,8 +1363,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const d = int(rng, 80, 420 + i * 700, 20);
-      const n = int(rng, 200, 1800 + i * 2200, 50);
+      const d = level === "basis" ? 100 : int(rng, 80, 420 + i * 700, 20);
+      const n = level === "basis" ? 600 : int(rng, 200, 1800 + i * 2200, 50);
       const answer = Math.PI * (d / 1000) * n / 60;
       return taskBase(
         "Umfangsgeschwindigkeit",
@@ -1301,7 +1382,7 @@ const TEMPLATES = {
   kraefte: [
     (rng, level) => {
       const i = levelIndex(level);
-      const mass = int(rng, 10, 120 + i * 500, 5);
+      const mass = level === "basis" ? 10 : int(rng, 10, 120 + i * 500, 5);
       const answer = mass * 9.81;
       return taskBase(
         "Gewichtskraft",
@@ -1315,9 +1396,9 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const f2 = int(rng, 100, 900 + i * 2400, 50);
-      const l2 = int(rng, 80, 380 + i * 700, 20);
-      const l1 = int(rng, 100, 700 + i * 1000, 20);
+      const f2 = level === "basis" ? 100 : int(rng, 100, 900 + i * 2400, 50);
+      const l2 = level === "basis" ? 20 : int(rng, 80, 380 + i * 700, 20);
+      const l1 = level === "basis" ? 50 : int(rng, 100, 700 + i * 1000, 20);
       const answer = f2 * l2 / l1;
       return taskBase(
         "Hebelgesetz",
@@ -1331,8 +1412,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const rate = int(rng, 4, 18 + i * 30);
-      const s = int(rng, 3, 30 + i * 60);
+      const rate = level === "basis" ? 5 : int(rng, 4, 18 + i * 30);
+      const s = level === "basis" ? 10 : int(rng, 3, 30 + i * 60);
       const answer = rate * s;
       return taskBase(
         "Federkraft",
@@ -1346,8 +1427,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const force = int(rng, 2000, 50000 + i * 120000, 1000);
-      const area = int(rng, 40, 400 + i * 900, 10);
+      const force = level === "basis" ? 1000 : int(rng, 2000, 50000 + i * 120000, 1000);
+      const area = level === "basis" ? 100 : int(rng, 40, 400 + i * 900, 10);
       const answer = force / area;
       return taskBase(
         "Zugspannung",
@@ -1361,8 +1442,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const tau = int(rng, 80, 180 + i * 260, 10);
-      const d = int(rng, 8, 40 + i * 80, 2);
+      const tau = level === "basis" ? 100 : int(rng, 80, 180 + i * 260, 10);
+      const d = level === "basis" ? 10 : int(rng, 8, 40 + i * 80, 2);
       const area = Math.PI * d * d / 4;
       const answer = tau * area / 1000;
       return taskBase(
@@ -1378,8 +1459,8 @@ const TEMPLATES = {
     },
     (rng, level) => {
       const i = levelIndex(level);
-      const force = int(rng, 500, 12000 + i * 32000, 500);
-      const d = int(rng, 10, 80 + i * 130, 5);
+      const force = level === "basis" ? 1000 : int(rng, 500, 12000 + i * 32000, 500);
+      const d = level === "basis" ? 10 : int(rng, 10, 80 + i * 130, 5);
       const area = Math.PI * d * d / 4;
       const answer = force / area;
       return taskBase(
@@ -1405,9 +1486,9 @@ function buildTasks() {
     result[category.id] = {};
     for (const difficulty of DIFFICULTIES) {
       const rng = rngFactory(hashString(`${category.id}-${difficulty.id}`));
-      const templates = TEMPLATES[category.id];
+      const templates = [...TEMPLATES[category.id], ...EXTRA_TEMPLATES[category.id]];
       result[category.id][difficulty.id] = Array.from({ length: TASKS_PER_LEVEL }, (_, index) => {
-        const template = templates[index % templates.length];
+        const template = templates[index];
         const task = template(rng, difficulty.id, index);
         return {
           ...task,

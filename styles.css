@@ -208,6 +208,12 @@ h4 {
   gap: 0.45rem;
 }
 
+.mobile-category-label,
+.category-select,
+.mobile-formulas {
+  display: none;
+}
+
 .category-button {
   width: 100%;
   padding: 0.7rem 0.75rem;
@@ -258,10 +264,10 @@ h4 {
 }
 
 .difficulty-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: start;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(360px, 48%);
+  flex: 0 0 auto;
   gap: 0.45rem;
 }
 
@@ -333,6 +339,10 @@ h4 {
 }
 
 .task-body {
+  display: block;
+}
+
+.task-body.has-diagram {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(11rem, 15rem);
   gap: 1rem;
@@ -373,17 +383,8 @@ h4 {
   overflow: hidden;
 }
 
-.diagram-slot:empty::before {
-  content: "Formel";
-  display: grid;
-  width: 5rem;
-  height: 5rem;
-  place-items: center;
-  border: 2px solid var(--blue);
-  border-radius: 50%;
-  color: var(--blue-dark);
-  background: rgba(255, 209, 102, 0.45);
-  font-weight: 900;
+.diagram-slot[hidden] {
+  display: none;
 }
 
 .diagram-slot svg {
@@ -427,6 +428,10 @@ h4 {
   min-width: 3rem;
   color: var(--muted);
   font-weight: 850;
+}
+
+.unit-label:empty {
+  display: none;
 }
 
 .primary-button,
@@ -536,6 +541,34 @@ h4 {
   padding: 0;
 }
 
+.math-frac {
+  display: inline-flex;
+  vertical-align: 0.6em;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  padding: 0 0.12em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.math-frac > span {
+  display: block;
+  max-width: 100%;
+  padding: 0 0.16em;
+  text-align: center;
+}
+
+.math-frac > span + span {
+  border-top: 1.5px solid currentColor;
+  padding-top: 0.08em;
+}
+
+sub {
+  font-size: 0.68em;
+  line-height: 0;
+}
+
 .task-navigation {
   margin-top: 1rem;
 }
@@ -633,7 +666,16 @@ h4 {
 
   .app-header {
     position: static;
+    gap: 0.55rem;
+    padding: 0.7rem 0.9rem;
   }
+
+  .app-header h1 { font-size: 1.12rem; }
+  .app-header .eyebrow { display: none; }
+
+  .header-actions { gap: 0.45rem; }
+  .header-actions .ghost-button { width: auto; min-height: 2.5rem; padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+  .total-progress { padding: 0.35rem 0.45rem; }
 
   .header-actions {
     justify-content: space-between;
@@ -644,7 +686,7 @@ h4 {
   }
 
   .difficulty-tabs {
-    justify-content: stretch;
+    width: 100%;
   }
 
   .difficulty-tab {
@@ -655,12 +697,28 @@ h4 {
     padding: 0.75rem;
   }
 
+  .mobile-category-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .category-select {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #b9c9d4;
+    border-radius: var(--radius);
+    color: var(--ink);
+    background: #fff;
+    font-weight: 750;
+  }
+
   .category-list {
-    display: flex;
-    gap: 0.55rem;
-    overflow-x: auto;
-    padding-bottom: 0.25rem;
-    scroll-snap-type: x proximity;
+    display: none;
   }
 
   .category-button {
@@ -669,26 +727,93 @@ h4 {
   }
 
   .task-body {
+    display: block;
+  }
+
+  .task-body.has-diagram {
     grid-template-columns: 1fr;
+  }
+
+  .diagram-slot {
+    min-height: 9rem;
+    margin-top: 0.75rem;
   }
 
   .answer-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .unit-label {
-    min-width: 0;
+    min-width: 2.2rem;
+  }
+
+  .answer-row .primary-button {
+    grid-column: 1 / -1;
   }
 
   .primary-button,
   .secondary-button,
   .ghost-button {
     width: 100%;
+    min-height: 2.75rem;
   }
 
   .panel-title {
     margin-bottom: 0.55rem;
   }
+
+  .lesson-strip,
+  .task-card,
+  .sidebar {
+    box-shadow: none;
+  }
+
+  .lesson-strip {
+    padding: 0.8rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .lesson-strip .eyebrow,
+  .category-intro,
+  .help-head p {
+    display: none;
+  }
+
+  .lesson-strip h2 { margin: 0; font-size: 1.18rem; }
+
+  .difficulty-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .difficulty-tab {
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.2rem;
+    font-size: 0.86rem;
+  }
+
+  .difficulty-tab span { font-size: 0.68rem; }
+  .difficulty-tab .tab-note { display: none; }
+
+  .help-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .help-head .ghost-button { width: auto; }
+
+  .hint-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hint-buttons button { min-height: 2.75rem; padding: 0.4rem 0.2rem; }
+
+  .mobile-formulas { display: block; margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.65rem; }
+  .mobile-formulas summary { cursor: pointer; color: var(--blue-dark); font-weight: 800; min-height: 2.25rem; }
+  .mobile-formulas .formula-list { margin-top: 0.4rem; }
+
+  .formula-card { display: none; }
+
+  .task-navigation { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 430px) {

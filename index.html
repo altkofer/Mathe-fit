@@ -7,6 +7,7 @@
     <title>Mathe-Fit Metall</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b4368'/%3E%3Cpath d='M12 46h40M16 42l13-24 9 24M29 18l19 28' stroke='%23ffd166' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='30' cy='18' r='4' fill='%23f7fbff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
+    <script src="extra-tasks.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -40,6 +41,8 @@
           <span>Rubriken</span>
           <small id="taskCountLabel">0 Aufgaben</small>
         </div>
+        <label class="mobile-category-label" for="categorySelect">Thema wählen</label>
+        <select id="categorySelect" class="category-select" aria-label="Thema wählen"></select>
         <nav class="category-list" id="categoryList"></nav>
       </aside>
 
@@ -94,11 +97,15 @@
               </div>
               <div class="hint-buttons" id="hintButtons"></div>
               <div class="hint-output" id="hintOutput" hidden></div>
+              <details class="mobile-formulas">
+                <summary>Formeln zum Thema</summary>
+                <div id="mobileFormulaList" class="formula-list"></div>
+              </details>
             </div>
 
             <div class="task-navigation">
               <button class="secondary-button" id="prevTask" type="button">Zurück</button>
-              <button class="secondary-button" id="nextTask" type="button">Nächste Aufgabe</button>
+              <button class="secondary-button" id="nextTask" type="button">Weiter</button>
             </div>
           </article>
 
