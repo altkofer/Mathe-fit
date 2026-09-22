@@ -31,11 +31,12 @@
           <span id="totalSolved">0</span>
           <small>gelöst</small>
         </div>
+        <button class="secondary-button header-progress-button" id="showProgress" type="button" aria-controls="dashboardView" aria-expanded="false">Fortschritt anzeigen</button>
         <button class="ghost-button" id="resetProgress" type="button">Fortschritt löschen</button>
       </div>
     </header>
 
-    <main class="app-layout">
+    <main class="app-layout" id="practiceView">
       <aside class="sidebar" aria-label="Rubriken">
         <div class="panel-title">
           <span>Rubriken</span>
@@ -126,6 +127,18 @@
           </aside>
         </div>
       </section>
+    </main>
+
+    <main class="dashboard-view" id="dashboardView" aria-labelledby="dashboardTitle" hidden>
+      <div class="dashboard-head">
+        <div>
+          <p class="eyebrow">Auf diesem Gerät</p>
+          <h2 id="dashboardTitle" tabindex="-1">Dein Fortschritt</h2>
+        </div>
+        <p id="dashboardTotal">0 von 486 Aufgaben gelöst</p>
+      </div>
+      <div class="dashboard-summary" id="dashboardSummary" aria-label="Fortschritt nach Stufe"></div>
+      <div class="dashboard-list" id="dashboardList" aria-label="Fortschritt nach Rubrik"></div>
     </main>
   </body>
 </html>

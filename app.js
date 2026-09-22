@@ -155,6 +155,13 @@ function cacheRefs() {
     "rubricAdvice",
     "totalSolved",
     "taskCountLabel",
+    "practiceView",
+    "dashboardView",
+    "dashboardTitle",
+    "dashboardTotal",
+    "dashboardSummary",
+    "dashboardList",
+    "showProgress",
     "resetProgress"
   ].forEach((id) => {
     refs[id] = document.getElementById(id);
@@ -162,6 +169,7 @@ function cacheRefs() {
 }
 
 function bindEvents() {
+  refs.showProgress.addEventListener("click", () => showDashboard(refs.dashboardView.hidden));
   refs.categorySelect.addEventListener("change", () => selectCategory(refs.categorySelect.value));
   refs.answerForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -188,6 +196,18 @@ function bindEvents() {
     saveProgress();
     renderAll();
   });
+}
+
+function showDashboard(show) {
+  refs.practiceView.hidden = show;
+  refs.dashboardView.hidden = !show;
+  refs.showProgress.textContent = show ? "Aufgaben anzeigen" : "Fortschritt anzeigen";
+  refs.showProgress.setAttribute("aria-expanded", String(show));
+  if (show) {
+    renderDashboard();
+    refs.dashboardTitle.focus({ preventScroll: true });
+  }
+  window.scrollTo(0, 0);
 }
 
 function selectCategory(categoryId) {
@@ -226,6 +246,53 @@ function renderAll() {
   renderFormulaCard();
   renderTask();
   renderGlobalProgress();
+  renderDashboard();
+}
+
+function dashboardMeter(categoryTitle, difficulty, solved, total) {
+  const width = Math.round((solved / total) * 100);
+  return `<div class="dashboard-meter dashboard-meter-${difficulty.id}" role="progressbar" aria-label="${categoryTitle}: ${difficulty.label}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${solved}"><span style="width:${width}%"></span></div>`;
+}
+
+function renderDashboard() {
+  const totals = DIFFICULTIES.map((difficulty) => {
+    const total = CATEGORIES.reduce((sum, category) => sum + generatedTasks[category.id][difficulty.id].length, 0);
+    const solved = CATEGORIES.reduce((sum, category) => sum + countSolved(category.id, difficulty.id), 0);
+    return { difficulty, solved, total };
+  });
+  const solvedAll = totals.reduce((sum, item) => sum + item.solved, 0);
+  const totalAll = totals.reduce((sum, item) => sum + item.total, 0);
+  refs.dashboardTotal.textContent = `${solvedAll} von ${totalAll} Aufgaben gelöst`;
+  refs.dashboardSummary.innerHTML = totals.map(({ difficulty, solved, total }) => `
+    <div class="dashboard-stat dashboard-stat-${difficulty.id}">
+      <span>${difficulty.label}</span>
+      <strong>${solved}<small>/${total}</small></strong>
+      ${dashboardMeter("Insgesamt", difficulty, solved, total)}
+    </div>
+  `).join("");
+
+  refs.dashboardList.innerHTML = CATEGORIES.map((category) => `
+    <section class="dashboard-row" aria-label="${category.title}">
+      <h3><button class="dashboard-category-link" type="button" data-category="${category.id}">${category.title}</button></h3>
+      <div class="dashboard-levels">
+        ${DIFFICULTIES.map((difficulty) => {
+          const total = generatedTasks[category.id][difficulty.id].length;
+          const solved = countSolved(category.id, difficulty.id);
+          return `<div class="dashboard-level">
+            <div class="dashboard-level-head"><span>${difficulty.label}</span><strong>${solved}/${total}</strong></div>
+            ${dashboardMeter(category.title, difficulty, solved, total)}
+          </div>`;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  refs.dashboardList.querySelectorAll(".dashboard-category-link").forEach((button) => {
+    button.addEventListener("click", () => {
+      showDashboard(false);
+      selectCategory(button.dataset.category);
+    });
+  });
 }
 
 function renderCategories() {
@@ -317,7 +384,7 @@ function renderTask() {
   refs.answerUnit.textContent = task.unit || "";
   refs.answerInput.value = "";
   refs.answerInput.placeholder = task.placeholder || "z. B. 12,5";
-  if (window.matchMedia("(min-width: 721px)").matches) {
+  if (!refs.practiceView.hidden && window.matchMedia("(min-width: 721px)").matches) {
     refs.answerInput.focus({ preventScroll: true });
   }
   refs.diagramSlot.innerHTML = task.diagram || "";
@@ -456,6 +523,7 @@ function checkAnswer() {
   renderDifficulties();
   renderFormulaCard();
   renderGlobalProgress();
+  renderDashboard();
 }
 
 function moveTask(direction) {
