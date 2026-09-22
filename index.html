@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Smartphonefreundliche Lernapp fuer Mathe-Grundlagen in Metallberufen.">
+    <title>Mathe-Fit Metall</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b4368'/%3E%3Cpath d='M12 46h40M16 42l13-24 9 24M29 18l19 28' stroke='%23ffd166' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='30' cy='18' r='4' fill='%23f7fbff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" role="img">
+            <rect x="8" y="42" width="48" height="6" rx="3"></rect>
+            <path d="M15 42 31 14l18 34"></path>
+            <path d="M31 14 52 48"></path>
+            <circle cx="31" cy="14" r="4"></circle>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">Berufsschule Metall</p>
+          <h1>Mathe-Fit Metall</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="total-progress">
+          <span id="totalSolved">0</span>
+          <small>gelöst</small>
+        </div>
+        <button class="ghost-button" id="resetProgress" type="button">Fortschritt löschen</button>
+      </div>
+    </header>
+
+    <main class="app-layout">
+      <aside class="sidebar" aria-label="Rubriken">
+        <div class="panel-title">
+          <span>Rubriken</span>
+          <small id="taskCountLabel">0 Aufgaben</small>
+        </div>
+        <nav class="category-list" id="categoryList"></nav>
+      </aside>
+
+      <section class="workspace" aria-live="polite">
+        <div class="lesson-strip">
+          <div>
+            <p class="eyebrow" id="sourceLabel">Quelle: eigene Aufgaben nach Aufgabenmustern</p>
+            <h2 id="categoryTitle">Rubrik</h2>
+            <p id="categoryIntro" class="category-intro"></p>
+          </div>
+          <div class="difficulty-tabs" id="difficultyTabs" role="tablist" aria-label="Schwierigkeit"></div>
+        </div>
+
+        <div class="workspace-grid">
+          <article class="task-card">
+            <div class="task-topline">
+              <div>
+                <span class="task-pill" id="difficultyPill">Basis</span>
+                <span class="task-counter" id="taskCounter">Aufgabe 1</span>
+              </div>
+              <button class="icon-button" id="randomTask" type="button" aria-label="Zufällige Aufgabe" title="Zufällige Aufgabe">
+                <span aria-hidden="true">↻</span>
+              </button>
+            </div>
+
+            <div class="task-body">
+              <div class="question-block">
+                <h3 id="taskTitle">Aufgabe</h3>
+                <div id="taskQuestion" class="task-question"></div>
+              </div>
+              <div id="diagramSlot" class="diagram-slot" aria-hidden="true"></div>
+            </div>
+
+            <form class="answer-form" id="answerForm" autocomplete="off">
+              <label for="answerInput">Deine Antwort</label>
+              <div class="answer-row">
+                <input id="answerInput" name="answer" inputmode="decimal" placeholder="z. B. 12,5" aria-describedby="answerUnit feedbackBox">
+                <span id="answerUnit" class="unit-label"></span>
+                <button class="primary-button" type="submit">Prüfen</button>
+              </div>
+            </form>
+
+            <div id="feedbackBox" class="feedback-box" hidden></div>
+
+            <div class="help-panel" id="helpPanel">
+              <div class="help-head">
+                <div>
+                  <h4>Hilfe holen</h4>
+                  <p>Nutze erst einen kleinen Tipp. Öffne mehr, wenn du festhängst.</p>
+                </div>
+                <button class="ghost-button compact" id="showSolution" type="button">Lösungsweg</button>
+              </div>
+              <div class="hint-buttons" id="hintButtons"></div>
+              <div class="hint-output" id="hintOutput" hidden></div>
+            </div>
+
+            <div class="task-navigation">
+              <button class="secondary-button" id="prevTask" type="button">Zurück</button>
+              <button class="secondary-button" id="nextTask" type="button">Nächste Aufgabe</button>
+            </div>
+          </article>
+
+          <aside class="formula-card">
+            <div class="formula-head">
+              <span>Tabellenbuch-Hilfe</span>
+              <small id="difficultyNote">Basis ist Pflicht</small>
+            </div>
+            <div id="formulaList" class="formula-list"></div>
+            <div class="rubric-progress">
+              <div class="progress-line">
+                <span>Basis</span>
+                <strong id="basisProgress">0/0</strong>
+              </div>
+              <div class="progress-bar" aria-hidden="true"><span id="basisBar"></span></div>
+              <p id="rubricAdvice"></p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

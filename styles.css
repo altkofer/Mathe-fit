@@ -1,0 +1,710 @@
+:root {
+  color-scheme: light;
+  --ink: #18242f;
+  --muted: #5d6b78;
+  --soft: #eef4f8;
+  --paper: #ffffff;
+  --line: #d7e2ea;
+  --blue: #0b5c86;
+  --blue-dark: #073b57;
+  --blue-soft: #dceefa;
+  --yellow: #ffd166;
+  --yellow-soft: #fff0c1;
+  --green: #1f8a5f;
+  --red: #b94b4b;
+  --shadow: 0 18px 50px rgba(25, 50, 70, 0.13);
+  --radius: 8px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, rgba(11, 92, 134, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(11, 92, 134, 0.04) 1px, transparent 1px),
+    #f8fbfd;
+  background-size: 28px 28px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem clamp(1rem, 4vw, 2.5rem);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: var(--radius);
+  color: var(--yellow);
+  background: var(--blue-dark);
+  flex: 0 0 auto;
+}
+
+.brand-mark svg {
+  width: 2.3rem;
+  height: 2.3rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.eyebrow {
+  margin: 0 0 0.2rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: clamp(1.2rem, 3vw, 1.75rem);
+  line-height: 1.05;
+}
+
+h2 {
+  margin-bottom: 0.3rem;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+}
+
+h3 {
+  margin-bottom: 0.7rem;
+  font-size: clamp(1.1rem, 4vw, 1.45rem);
+}
+
+h4 {
+  margin-bottom: 0.2rem;
+  font-size: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.total-progress {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  white-space: nowrap;
+}
+
+.total-progress span {
+  font-weight: 900;
+  color: var(--blue-dark);
+}
+
+.total-progress small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  gap: clamp(1rem, 2.6vw, 1.8rem);
+  width: min(1220px, 100%);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.sidebar,
+.task-card,
+.formula-card,
+.lesson-strip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.sidebar {
+  position: sticky;
+  top: 5.6rem;
+  align-self: start;
+  max-height: calc(100vh - 6.6rem);
+  overflow: auto;
+  padding: 0.9rem;
+}
+
+.panel-title,
+.formula-head,
+.task-topline,
+.progress-line,
+.help-head,
+.task-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-title {
+  margin-bottom: 0.7rem;
+  font-weight: 900;
+}
+
+.panel-title small,
+.formula-head small,
+.task-counter,
+.category-button small,
+.category-intro,
+.help-head p,
+.rubric-progress p {
+  color: var(--muted);
+}
+
+.category-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.category-button {
+  width: 100%;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+}
+
+.category-button:hover,
+.category-button[aria-current="true"] {
+  border-color: #b8d7e9;
+  background: var(--blue-soft);
+}
+
+.category-button strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.category-button .mini-progress {
+  display: block;
+  height: 0.3rem;
+  margin-top: 0.45rem;
+  border-radius: 99px;
+  background: #d9e6ee;
+  overflow: hidden;
+}
+
+.category-button .mini-progress span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--blue);
+}
+
+.workspace {
+  min-width: 0;
+}
+
+.lesson-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: clamp(1rem, 3vw, 1.4rem);
+}
+
+.difficulty-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.difficulty-tab {
+  min-height: 2.7rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  background: var(--paper);
+  font-weight: 800;
+}
+
+.difficulty-tab span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.difficulty-tab[aria-selected="true"] {
+  border-color: var(--blue);
+  color: #fff;
+  background: var(--blue);
+}
+
+.difficulty-tab[aria-selected="true"] span {
+  color: #e4f5ff;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.task-card {
+  padding: clamp(1rem, 3vw, 1.4rem);
+}
+
+.task-topline {
+  margin-bottom: 1rem;
+}
+
+.task-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  margin-right: 0.45rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 99px;
+  color: var(--blue-dark);
+  background: var(--yellow-soft);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--blue-dark);
+  background: var(--paper);
+  font-size: 1.25rem;
+}
+
+.task-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 15rem);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.question-block {
+  min-width: 0;
+}
+
+.task-question {
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+.task-question strong,
+.formula-list code,
+.hint-output code {
+  padding: 0.08rem 0.25rem;
+  border-radius: 4px;
+  background: #eef6fb;
+  color: var(--blue-dark);
+  font-family: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.diagram-slot {
+  display: grid;
+  min-height: 11rem;
+  place-items: center;
+  border: 1px solid #d5e4ed;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(90deg, rgba(11, 92, 134, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(11, 92, 134, 0.08) 1px, transparent 1px),
+    #fbfdff;
+  background-size: 16px 16px;
+  overflow: hidden;
+}
+
+.diagram-slot:empty::before {
+  content: "Formel";
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border: 2px solid var(--blue);
+  border-radius: 50%;
+  color: var(--blue-dark);
+  background: rgba(255, 209, 102, 0.45);
+  font-weight: 900;
+}
+
+.diagram-slot svg {
+  width: min(92%, 14rem);
+  height: auto;
+}
+
+.answer-form {
+  margin-top: 1.1rem;
+}
+
+.answer-form label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 850;
+}
+
+.answer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.answer-row input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #b9c9d4;
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 1.08rem;
+}
+
+.answer-row input:focus {
+  outline: 3px solid rgba(11, 92, 134, 0.18);
+  border-color: var(--blue);
+}
+
+.unit-label {
+  min-width: 3rem;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  min-height: 2.7rem;
+  border-radius: var(--radius);
+  font-weight: 850;
+}
+
+.primary-button {
+  border: 1px solid var(--blue-dark);
+  color: #fff;
+  background: var(--blue-dark);
+  padding: 0.65rem 1rem;
+}
+
+.secondary-button {
+  border: 1px solid #abc7d7;
+  color: var(--blue-dark);
+  background: #eef7fc;
+  padding: 0.6rem 0.85rem;
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  color: var(--blue-dark);
+  background: #fff;
+  padding: 0.55rem 0.75rem;
+}
+
+.compact {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.feedback-box {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--soft);
+  line-height: 1.45;
+}
+
+.feedback-box.correct {
+  border-color: rgba(31, 138, 95, 0.35);
+  background: #e9f7f0;
+  color: #145f40;
+}
+
+.feedback-box.wrong {
+  border-color: rgba(185, 75, 75, 0.32);
+  background: #fff0ed;
+  color: #874040;
+}
+
+.help-panel {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border: 1px dashed #b8cdd9;
+  border-radius: var(--radius);
+  background: #fbfdff;
+}
+
+.help-panel.needs-help {
+  border-color: var(--yellow);
+  background: #fffaf0;
+}
+
+.help-head {
+  align-items: start;
+}
+
+.help-head p {
+  margin-bottom: 0;
+  font-size: 0.92rem;
+}
+
+.hint-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.hint-buttons button {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #c2d5e0;
+  border-radius: var(--radius);
+  color: var(--blue-dark);
+  background: #fff;
+  font-weight: 800;
+}
+
+.hint-output {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-left: 4px solid var(--blue);
+  background: #eef7fc;
+  line-height: 1.5;
+}
+
+.hint-output ol {
+  margin: 0.35rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.task-navigation {
+  margin-top: 1rem;
+}
+
+.formula-card {
+  position: sticky;
+  top: 5.6rem;
+  padding: 1rem;
+}
+
+.formula-head {
+  margin-bottom: 0.7rem;
+  font-weight: 900;
+}
+
+.formula-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.formula-item {
+  padding: 0.65rem;
+  border: 1px solid #d7e5ec;
+  border-radius: var(--radius);
+  background: #fbfdff;
+  line-height: 1.45;
+}
+
+.formula-item small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
+.rubric-progress {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.progress-line {
+  margin-bottom: 0.35rem;
+}
+
+.progress-bar {
+  height: 0.55rem;
+  border-radius: 99px;
+  background: #dce8ef;
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), #1f8a5f);
+}
+
+.rubric-progress p {
+  margin: 0.65rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 940px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .formula-card {
+    position: static;
+    max-height: none;
+  }
+
+  .category-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header,
+  .lesson-strip,
+  .task-body,
+  .answer-row,
+  .help-head,
+  .task-navigation {
+    display: grid;
+  }
+
+  .app-header {
+    position: static;
+  }
+
+  .header-actions {
+    justify-content: space-between;
+  }
+
+  .lesson-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .difficulty-tabs {
+    justify-content: stretch;
+  }
+
+  .difficulty-tab {
+    flex: 1 1 8rem;
+  }
+
+  .sidebar {
+    padding: 0.75rem;
+  }
+
+  .category-list {
+    display: flex;
+    gap: 0.55rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .category-button {
+    min-width: 12.5rem;
+    scroll-snap-align: start;
+  }
+
+  .task-body {
+    grid-template-columns: 1fr;
+  }
+
+  .answer-row {
+    grid-template-columns: 1fr;
+  }
+
+  .unit-label {
+    min-width: 0;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .ghost-button {
+    width: 100%;
+  }
+
+  .panel-title {
+    margin-bottom: 0.55rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-layout {
+    padding: 0.75rem;
+  }
+
+  .task-card,
+  .formula-card,
+  .lesson-strip,
+  .sidebar {
+    border-radius: 0;
+  }
+
+  .brand-mark {
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+}
